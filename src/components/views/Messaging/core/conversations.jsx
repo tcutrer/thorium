@@ -52,9 +52,9 @@ function alertReducer(state, action) {
     case "messageAlert": {
       const list = action.messageList.filter(
         m =>
-          action.stationNames.indexOf(m.destination) > -1 &&
-          m.sender !== (state.selectedConvo && state.selectedConvo.sender) &&
-          !action.oldMessageList.find(o => o.id === m.id),
+          action.stationNames.indexOf(m.sender) > -1 &&
+          action.stationNames.indexOf(m.destination) === -1 &&
+          m.destination !== (state.selectedConvo && state.selectedConvo.sender),
       );
       if (list.length === 0) return state;
       const alertMessages = list
@@ -84,16 +84,15 @@ const Conversations = props => {
   const [newMessage, setNewMessage] = React.useState(null);
   const [messageInput, setMessageInput] = React.useState(null);
   const messageHolder = React.useRef();
-  const previousMessages = usePrevious(messages);
+  const previousMessages = React.useRef(messages);
 
   React.useEffect(() => {
     const stationNames = simulator.stations.map(s => s.name);
-    const messageList = Object.values(reduceMessages(messages, stationNames));
-    const oldMessageList = Object.values(
-      reduceMessages(previousMessages, stationNames),
-    );
-    dispatch({type: "messageAlert", messageList, oldMessageList, stationNames});
-  }, [messages, previousMessages, simulator.stations]);
+    const previousIds = new Set(previousMessages.current.map(m => m.id));
+    const messageList = messages.filter(m => !previousIds.has(m.id));
+    previousMessages.current = messages;
+    dispatch({type: "messageAlert", messageList, stationNames});
+  }, [messages, simulator.stations]);
 
   const scrollElement = () => {
     const el = messageHolder.current;
